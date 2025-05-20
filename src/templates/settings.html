@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="settings-container">
+    <h1>Job Search Settings</h1>
+    
+    <div class="card">
+        <form method="POST" action="{{ url_for('settings') }}">
+            {{ form.hidden_tag() }}
+            
+            <div class="form-group">
+                {{ form.job_role.label }}
+                {{ form.job_role(class="form-control") }}
+                {% for error in form.job_role.errors %}
+                    <span class="error">{{ error }}</span>
+                {% endfor %}
+            </div>
+            
+            <div class="form-group">
+                {{ form.experience_level.label }}
+                {{ form.experience_level(class="form-control") }}
+                {% for error in form.experience_level.errors %}
+                    <span class="error">{{ error }}</span>
+                {% endfor %}
+            </div>
+            
+            <div class="form-group">
+                <label>Salary Range (LPA)</label>
+                <div class="salary-range">
+                    {{ form.min_salary(class="form-control", placeholder="Min") }}
+                    <span>to</span>
+                    {{ form.max_salary(class="form-control", placeholder="Max") }}
+                </div>
+                {% for error in form.min_salary.errors %}
+                    <span class="error">{{ error }}</span>
+                {% endfor %}
+                {% for error in form.max_salary.errors %}
+                    <span class="error">{{ error }}</span>
+                {% endfor %}
+            </div>
+            
+            <div class="form-group">
+                {{ form.locations.label }}
+                {{ form.locations(class="form-control", placeholder="e.g. Remote, New York, San Francisco") }}
+                <small class="form-text text-muted">Enter locations separated by commas</small>
+                {% for error in form.locations.errors %}
+                    <span class="error">{{ error }}</span>
+                {% endfor %}
+            </div>
+            
+            <div class="form-group">
+                {{ form.daily_limit.label }}
+                {{ form.daily_limit(class="form-control") }}
+                <small class="form-text text-muted">Maximum number of applications per day</small>
+                {% for error in form.daily_limit.errors %}
+                    <span class="error">{{ error }}</span>
+                {% endfor %}
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Save Settings</button>
+        </form>
+    </div>
+
+    <div class="card mt-4">
+        <h2>Resume Management</h2>
+        <form action="{{ url_for('upload_resume') }}" method="POST" enctype="multipart/form-data" class="resume-form">
+            <div class="form-group">
+                <label for="resume">Update Resume (PDF/DOCX)</label>
+                <input type="file" id="resume" name="resume" accept=".pdf,.docx" class="form-control-file">
+            </div>
+            <button type="submit" class="btn btn-primary">Upload Resume</button>
+        </form>
+    </div>
+
+    <div class="card mt-4">
+        <h2>Bot Configuration</h2>
+        <div class="bot-settings">
+            <div class="form-group">
+                <label>Bot Status</label>
+                <div class="bot-status">
+                    <span id="botStatusIndicator" class="status-indicator"></span>
+                    <span id="botStatusText">Checking...</span>
+                </div>
+            </div>
+            <button id="toggleBot" class="btn btn-primary">
+                <i class="material-icons">power_settings_new</i>
+                <span>Toggle Bot</span>
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Update bot status
+    function updateBotStatus() {
+        fetch('/bot_status')
+            .then(response => response.json())
+            .then(data => {
+                const indicator = document.getElementById('botStatusIndicator');
+                const statusText = document.getElementById('botStatusText');
+                const toggleBtn = document.getElementById('toggleBot');
+                
+                if (data.running) {
+                    indicator.className = 'status-indicator active';
+                    statusText.textContent = 'Active';
+                    toggleBtn.classList.add('active');
+                } else {
+                    indicator.className = 'status-indicator inactive';
+                    statusText.textContent = 'Inactive';
+                    toggleBtn.classList.remove('active');
+                }
+            });
+    }
+
+    // Initial status check
+    updateBotStatus();
+
+    // Set up bot toggle
+    document.getElementById('toggleBot').addEventListener('click', function() {
+        const endpoint = this.classList.contains('active') ? '/stop_bot' : '/start_bot';
+        fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                showNotification(data.message, 'success');
+            }
+            updateBotStatus();
+        })
+        .catch(error => {
+            showNotification('Failed to toggle bot', 'error');
+        });
+    });
+</script>
+{% endblock %}

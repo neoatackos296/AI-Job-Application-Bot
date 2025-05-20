@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="stats-container">
+        <div class="stat-card">
+            <h3>Today's Applications</h3>
+            <p class="stat-number">{{ today_apps }}</p>
+        </div>
+        <div class="stat-card">
+            <h3>Response Rate</h3>
+            <p class="stat-number">{{ response_rate }}%</p>
+        </div>
+        <div class="stat-card">
+            <h3>Interviews</h3>
+            <p class="stat-number">{{ interviews }}</p>
+        </div>
+    </div>
+
+    <div class="recent-applications">
+        <h2>Recent Applications</h2>
+        <div class="job-list">
+            {% for job in recent_jobs %}
+            <div class="job-card">
+                <div class="job-header">
+                    <h3>{{ job.title }}</h3>
+                    <span class="company">{{ job.company }}</span>
+                </div>
+                <div class="job-details">
+                    <span class="location">{{ job.location }}</span>
+                    <span class="status {{ job.status.lower() }}">{{ job.status }}</span>
+                </div>
+                <div class="job-actions">
+                    <a href="{{ job.url }}" target="_blank" class="btn btn-outline">View Job</a>
+                    <button class="btn btn-primary" onclick="viewApplication({{ job.id }})">Details</button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="settings-panel">
+        <h2>Job Preferences</h2>
+        <form id="preferencesForm">
+            <div class="form-group">
+                <label for="jobRole">Job Role</label>
+                <input type="text" id="jobRole" name="job_role" value="{{ preferences.job_role }}">
+            </div>
+            <div class="form-group">
+                <label for="experience">Experience Level</label>
+                <select id="experience" name="experience">
+                    <option value="Entry-level">Entry-level</option>
+                    <option value="Mid-level">Mid-level</option>
+                    <option value="Senior">Senior</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Locations</label>
+                <div class="location-tags">
+                    {% for location in preferences.locations %}
+                    <span class="tag">
+                        {{ location }}
+                        <i class="material-icons" onclick="removeLocation(this)">close</i>
+                    </span>
+                    {% endfor %}
+                    <input type="text" id="newLocation" placeholder="Add location...">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="salaryRange">Salary Range (LPA)</label>
+                <div class="range-input">
+                    <input type="number" id="salaryMin" value="{{ preferences.salary_range[0] }}">
+                    <span>-</span>
+                    <input type="number" id="salaryMax" value="{{ preferences.salary_range[1] }}">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Save Preferences</button>
+        </form>
+    </div>
+</div>
+
+<!-- Application Details Modal -->
+<div id="applicationModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Application Details</h2>
+        <div id="applicationDetails"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Initialize dashboard functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        // Bot control
+        const toggleBot = document.getElementById('toggleBot');
+        let botRunning = false;
+
+        toggleBot.addEventListener('click', function() {
+            const endpoint = botRunning ? '/stop_bot' : '/start_bot';
+            fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                botRunning = !botRunning;
+                toggleBot.classList.toggle('active');
+            });
+        });
+
+        // Preferences form
+        const preferencesForm = document.getElementById('preferencesForm');
+        preferencesForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            fetch('/update_preferences', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(Object.fromEntries(formData))
+            })
+            .then(response => response.json())
+            .then(data => {
+                showNotification('Preferences updated successfully', 'success');
+            });
+        });
+    });
+
+    function viewApplication(jobId) {
+        fetch(`/application/${jobId}`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('applicationDetails').innerHTML = `
+                    <div class="application-details">
+                        <h3>${data.title}</h3>
+                        <p class="company">${data.company}</p>
+                        <p class="date">Applied: ${data.application_date}</p>
+                        <div class="status ${data.status.toLowerCase()}">${data.status}</div>
+                        <div class="documents">
+                            <h4>Documents</h4>
+                            <a href="${data.resume_url}" target="_blank">View Resume</a>
+                            <a href="${data.cover_letter_url}" target="_blank">View Cover Letter</a>
+                        </div>
+                    </div>
+                `;
+                const modal = document.getElementById('applicationModal');
+                modal.style.display = 'block';
+            });
+    }
+</script>
+{% endblock %}

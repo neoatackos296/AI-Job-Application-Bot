@@ -219,6 +219,118 @@ class JobBot:
         
         return jobs
 
+    def apply_to_job(self, job_data: Dict, user_data: Dict) -> bool:
+        """Apply to a job with customized resume and cover letter"""
+        try:
+            print(f"\nApplying to: {job_data['title']} at {job_data['company']}")
+            self.browser.navigate(job_data['url'])
+            self.browser.random_delay()
+            
+            # Wait for the apply button
+            apply_button = self.browser.wait.until(
+                EC.presence_of_element_located((
+                    By.CSS_SELECTOR, 
+                    "button[data-control-name='jobdetails_topcard_inapply']"
+                ))
+            )
+            self.browser.safe_click(apply_button)
+            self.browser.random_delay()
+            
+            # Check if already applied
+            try:
+                already_applied = self.browser.driver.find_element(
+                    By.CSS_SELECTOR, 
+                    ".jobs-apply-button--applied"
+                )
+                if already_applied:
+                    print("Already applied to this job")
+                    return False
+            except Exception:
+                pass
+            
+            # Handle the application form
+            try:
+                # Upload resume if requested
+                resume_upload = self.browser.driver.find_element(
+                    By.CSS_SELECTOR, 
+                    "input[name='resume']"
+                )
+                if resume_upload:
+                    resume_upload.send_keys(user_data['resume_path'])
+                    self.browser.random_delay()
+            except Exception:
+                print("No resume upload field found")
+            
+            # Fill in any additional fields
+            input_fields = self.browser.driver.find_elements(
+                By.CSS_SELECTOR, 
+                "input[type='text'], textarea"
+            )
+            
+            for field in input_fields:
+                try:
+                    label = field.get_attribute('aria-label').lower()
+                    if 'years of experience' in label:
+                        field.send_keys(str(user_data['experience_years']))
+                    elif 'name' in label:
+                        field.send_keys(user_data['name'])
+                    elif 'email' in label:
+                        field.send_keys(user_data['email'])
+                    elif 'phone' in label:
+                        field.send_keys(user_data['phone'])
+                except Exception:
+                    continue
+            
+            # Handle any screening questions
+            questions = self.browser.driver.find_elements(
+                By.CSS_SELECTOR, 
+                ".jobs-easy-apply-form-section__custom-fields"
+            )
+            
+            for question in questions:
+                try:
+                    question_text = question.find_element(
+                        By.CSS_SELECTOR, 
+                        "label"
+                    ).text
+                    
+                    # Use AI to generate appropriate response
+                    answer = self.ai_service.answer_application_question(
+                        question_text, 
+                        user_data['experience']
+                    )
+                    
+                    input_field = question.find_element(
+                        By.CSS_SELECTOR, 
+                        "input, textarea, select"
+                    )
+                    input_field.send_keys(answer)
+                except Exception as e:
+                    print(f"Error handling question: {str(e)}")
+                    continue
+            
+            # Submit application
+            submit_button = self.browser.driver.find_element(
+                By.CSS_SELECTOR, 
+                "button[aria-label='Submit application']"
+            )
+            self.browser.safe_click(submit_button)
+            
+            # Wait for confirmation
+            success = self.browser.wait.until(
+                EC.presence_of_element_located((
+                    By.CSS_SELECTOR, 
+                    ".artdeco-inline-feedback--success"
+                ))
+            )
+            
+            print("Application submitted successfully!")
+            return True
+            
+        except Exception as e:
+            print(f"Error applying to job: {str(e)}")
+            return False
+
     def close(self):
         """Clean up resources"""
         self.browser.close()

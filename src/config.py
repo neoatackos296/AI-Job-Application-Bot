@@ -5,11 +5,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
+    # Flask Settings
+    SECRET_KEY = os.getenv('SECRET_KEY', os.urandom(24))
+    DEBUG_MODE = os.getenv('DEBUG_MODE', 'True').lower() == 'true'
+    
     # API Keys
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-    
-    # Database
-    DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///./jobs.db')
+      # Database
+    DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///./database/jobs.db')
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    DATABASE_LOGGING = os.getenv('DATABASE_LOGGING', 'False').lower() == 'true'
     
     # Browser Settings
     HEADLESS_MODE = os.getenv('HEADLESS_MODE', 'False').lower() == 'true'
