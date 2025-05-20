@@ -1,3 +1,9 @@
+from pathlib import Path
+from Crypto.Cipher import AES
+from Crypto.Random import get_random_bytes
+import json
+import base64
+import pickle
 import undetected_chromedriver as uc
 from selenium.webdriver.chrome.service import Service
 from selenium import webdriver
@@ -13,6 +19,12 @@ from config import Config
 
 class Browser:
     def __init__(self):
+        self.cookie_file = Path('src/database/session.enc')
+        self.key_file = Path('src/database/key.bin')
+        self.driver = None
+        self._initialize_browser()
+    
+    def _initialize_browser(self):
         try:
             print("Initializing Chrome browser...")
             options = uc.ChromeOptions()
@@ -28,12 +40,13 @@ class Browser:
             options.add_argument('--window-size=1920,1080')
             
             try:
-                # Try undetected-chromedriver first
                 print("Attempting to start Chrome with undetected-chromedriver...")
                 self.driver = uc.Chrome(version_main=127, options=options)
+                # Load saved cookies after browser is initialized
+                if self._load_cookies():
+                    print("Loaded saved session...")
             except Exception as e:
                 print(f"Falling back to regular ChromeDriver: {str(e)}")
-                # Fallback to regular ChromeDriver with webdriver-manager
                 service = Service(ChromeDriverManager().install())
                 self.driver = webdriver.Chrome(service=service, options=options)
             
@@ -42,9 +55,92 @@ class Browser:
             self.wait = WebDriverWait(self.driver, 60)
             # Also create a shorter wait for regular operations
             self.short_wait = WebDriverWait(self.driver, 10)
+            
         except Exception as e:
             print(f"Error initializing Chrome: {str(e)}")
             raise
+    
+    def _get_encryption_key(self):
+        """Get or create encryption key for cookie storage"""
+        if not self.key_file.exists():
+            key = get_random_bytes(32)
+            self.key_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(self.key_file, 'wb') as f:
+                f.write(key)
+        else:
+            with open(self.key_file, 'rb') as f:
+                key = f.read()
+        return key
+    
+    def _encrypt_data(self, data):
+        """Encrypt data for storage"""
+        key = self._get_encryption_key()
+        cipher = AES.new(key, AES.MODE_GCM)
+        ciphertext, tag = cipher.encrypt_and_digest(pickle.dumps(data))
+        json_data = {
+            'nonce': base64.b64encode(cipher.nonce).decode('utf-8'),
+            'ciphertext': base64.b64encode(ciphertext).decode('utf-8'),
+            'tag': base64.b64encode(tag).decode('utf-8')
+        }
+        return json.dumps(json_data)
+    
+    def _decrypt_data(self, encrypted_str):
+        """Decrypt stored data"""
+        try:
+            key = self._get_encryption_key()
+            json_data = json.loads(encrypted_str)
+            nonce = base64.b64decode(json_data['nonce'])
+            ciphertext = base64.b64decode(json_data['ciphertext'])
+            tag = base64.b64decode(json_data['tag'])
+            
+            cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+            data = cipher.decrypt_and_verify(ciphertext, tag)
+            return pickle.loads(data)
+        except Exception as e:
+            print(f"Error decrypting data: {str(e)}")
+            return None
+    
+    def save_cookies(self):
+        """Save current session cookies"""
+        if not self.driver:
+            return
+        
+        try:
+            cookies = self.driver.get_cookies()
+            encrypted_data = self._encrypt_data(cookies)
+            self.cookie_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(self.cookie_file, 'w') as f:
+                f.write(encrypted_data)
+            print("Session saved successfully")
+        except Exception as e:
+            print(f"Error saving session: {str(e)}")
+    
+    def _load_cookies(self):
+        """Load saved session cookies"""
+        if not self.cookie_file.exists() or not self.driver:
+            return False
+        
+        try:
+            with open(self.cookie_file, 'r') as f:
+                encrypted_data = f.read()
+            cookies = self._decrypt_data(encrypted_data)
+            if cookies:
+                self.driver.get("https://www.linkedin.com")  # Load domain before adding cookies
+                for cookie in cookies:
+                    try:
+                        self.driver.add_cookie(cookie)
+                    except Exception as e:
+                        print(f"Error adding cookie: {str(e)}")
+                return True
+        except Exception as e:
+            print(f"Error loading session: {str(e)}")
+        return False
+    
+    def navigate(self, url):
+        """Safely navigate to a URL"""
+        print(f"Navigating to: {url}")
+        self.driver.get(url)
+        self.random_delay()
     
     def random_delay(self):
         """Add random delay between actions to mimic human behavior"""
@@ -61,28 +157,10 @@ class Browser:
             pyautogui.click(bounds['x'] + bounds['width']/2, 
                           bounds['y'] + bounds['height']/2)
     
-    def navigate(self, url):
-        """Safely navigate to a URL"""
-        print(f"Navigating to: {url}")
-        self.driver.get(url)
-        self.random_delay()
-    
-    def wait_for_user_input(self, message: str, timeout: int = 120):
-        """Wait for user to complete an action"""
-        print(f"\n{message}")
-        print(f"You have {timeout} seconds to complete this action...")
-        start_time = time.time()
-        while time.time() - start_time < timeout:
-            time.sleep(1)
-            remaining = int(timeout - (time.time() - start_time))
-            if remaining % 10 == 0:  # Print remaining time every 10 seconds
-                print(f"{remaining} seconds remaining...")
-        print("Timeout completed, continuing...")
-    
     def close(self):
-        """Close the browser"""
+        """Close the browser and save session"""
         if self.driver:
-            print("Closing Chrome browser...")
+            self.save_cookies()
             try:
                 self.driver.quit()
                 print("Browser closed successfully")
