@@ -2,11 +2,42 @@ import os
 import shutil
 from pathlib import Path
 
+def setup_logging() -> None:
+    """Set up logging configuration"""
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s'
+    )
+
+def get_workspace_root() -> Optional[Path]:
+    """Get the workspace root directory"""
+    try:
+        return Path(__file__).parent.parent.parent
+    except Exception as e:
+        logging.error(f"Failed to determine workspace root: {e}")
+        return None
+
+def remove_file(path: Path) -> None:
+    """Safely remove a file or directory"""
+    try:
+        if path.is_file():
+            path.unlink()
+            logging.info(f"Removed file: {path}")
+        elif path.is_dir():
+            shutil.rmtree(path)
+            logging.info(f"Removed directory: {path}")
+    except Exception as e:
+        logging.error(f"Error removing {path}: {e}")
+
 def cleanup_workspace():
     """Clean up workspace by removing temporary files and fixing git issues"""
-    workspace_root = Path(__file__).parent.parent.parent
+    setup_logging()
     
-    # Files to remove
+    workspace_root = get_workspace_root()
+    if not workspace_root:
+        return
+    
+    # Files and patterns to remove
     files_to_remove = [
         "t Initializing Git repository...",
         "jobs.db",
@@ -16,6 +47,10 @@ def cleanup_workspace():
         "*.pyd",
         ".Python",
         "pip-log.txt",
+        "*.swp",
+        "*.swo",
+        ".DS_Store",
+        "Thumbs.db"
     ]
     
     # Clean up temporary files
