@@ -1,0 +1,30 @@
+[Your Name]
+[Your Address]
+[City, State ZIP]
+[Phone]
+[Email]
+
+PROFESSIONAL SUMMARY
+Experienced software developer with strong background in Python development, web technologies, and automation. Proven track record of delivering high-quality code and implementing efficient solutions.
+
+SKILLS
+- Programming Languages: Python, JavaScript, SQL
+- Web Technologies: HTML, CSS, React, FastAPI
+- Tools & Frameworks: Git, Docker, Selenium, PostgreSQL
+- Soft Skills: Problem Solving, Team Collaboration, Communication
+
+EXPERIENCE
+Software Developer | [Previous Company]
+[Date] - Present
+- Developed and maintained web applications using Python and JavaScript
+- Implemented automated testing solutions using Selenium
+- Collaborated with cross-functional teams to deliver projects on time
+
+[Previous Role] | [Previous Company]
+[Date] - [Date]
+- [Achievement/Responsibility]
+- [Achievement/Responsibility]
+
+EDUCATION
+Bachelor of Science in Computer Science
+[University Name] | [Graduation Year]

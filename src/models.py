@@ -8,7 +8,7 @@ from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 
-from config import Config
+from .config import Config
 
 Base = declarative_base()
 
@@ -35,33 +35,33 @@ class User(Base, UserMixin):
         return check_password_hash(self.password_hash, password)
 
 class Job(Base):
-    __tablename__ = 'jobs'
+    __tablename__ = "jobs"
     
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey('users.id'))
-    title = Column(String(255))
-    company = Column(String(255))
-    location = Column(String(255))
-    description = Column(Text)
-    url = Column(String(500))
-    salary_min = Column(Float)
-    salary_max = Column(Float)
+    title = Column(String)
+    company = Column(String)
+    location = Column(String)
+    description = Column(String)
+    url = Column(String, unique=True)
     applied = Column(Boolean, default=False)
-    application_date = Column(DateTime, nullable=True)
-    status = Column(String(50))
-    resume_version = Column(String(500))
-    cover_letter_path = Column(String(500))
-    response_received = Column(Boolean, default=False)
-    response_date = Column(DateTime, nullable=True)
-    interview_date = Column(DateTime, nullable=True)
-    rejection_reason = Column(String(500))
-    notes = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
+    applications = relationship("Application", back_populates="job")
     
     user = relationship('User', back_populates='jobs')
     
     def __repr__(self):
         return f"<Job(title='{self.title}', company='{self.company}', status='{self.status}')>"
+
+class Application(Base):
+    __tablename__ = "applications"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    job_id = Column(Integer, ForeignKey("jobs.id"))
+    status = Column(String)  # pending, submitted, rejected, interview
+    applied_at = Column(DateTime, default=datetime.utcnow)
+    response_received = Column(Boolean, default=False)
+    job = relationship("Job", back_populates="applications")
 
 # Database setup
 engine = create_engine(Config.DATABASE_URL)

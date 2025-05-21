@@ -5,31 +5,19 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
-    # Flask Settings
-    SECRET_KEY = os.getenv('SECRET_KEY', os.urandom(24))
-    DEBUG_MODE = os.getenv('DEBUG_MODE', 'True').lower() == 'true'
+    """Configuration settings for the application"""
     
     # API Keys
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-      # Database
+    
+    # Database
     DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///./database/jobs.db')
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
     DATABASE_LOGGING = os.getenv('DATABASE_LOGGING', 'False').lower() == 'true'
     
-    # Browser Settings
+    # Application Settings
+    DEBUG_MODE = os.getenv('DEBUG_MODE', 'True').lower() == 'true'
     HEADLESS_MODE = os.getenv('HEADLESS_MODE', 'False').lower() == 'true'
     STEALTH_MODE = os.getenv('STEALTH_MODE', 'True').lower() == 'true'
     MIN_DELAY = float(os.getenv('MIN_DELAY', '2'))
     MAX_DELAY = float(os.getenv('MAX_DELAY', '5'))
-      # Job Search Settings
-    JOB_KEYWORDS = [
-        'AI Engineer', 'Machine Learning Engineer', 'Prompt Engineer',
-        'AI Research Scientist', 'Data Engineer', 'Big Data Engineer',
-        'Data Analyst', 'AI Software Engineer', 'Software Architect',
-        'Full Stack Developer', 'Cloud Software Developer',
-        'Cybersecurity Specialist', 'Cloud Engineer', 'NLP Engineer'
-    ]
-    LOCATIONS = ['Remote', 'United States', 'New York', 'San Francisco', 'Seattle']
-      # Resume/Cover Letter Templates
-    RESUME_PATH = 'src/Yash B Agarwa1.pdf'
-    COVER_LETTER_TEMPLATE_PATH = 'templates/cover_letter_template.txt'
+    MAX_DAILY_APPLICATIONS = int(os.getenv('MAX_DAILY_APPLICATIONS', '50'))

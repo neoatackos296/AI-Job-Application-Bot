@@ -7,10 +7,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 import os
 import time
 
-from browser import Browser
-from models import Job, SessionLocal
-from ai_service import AIService
-from config import Config
+from .browser import Browser
+from .models import Job, SessionLocal
+from .ai_service import AIService
+from .config import Config
 
 class JobBot:
     def __init__(self):

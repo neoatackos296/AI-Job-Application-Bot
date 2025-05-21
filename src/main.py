@@ -5,12 +5,14 @@ from datetime import datetime
 from flask import Flask, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import LoginManager, current_user, login_user, login_required, logout_user
 from apscheduler.schedulers.background import BackgroundScheduler
+import asyncio
 
 from job_bot import JobBot
 from config import Config
 from models import SessionLocal, Job, User, Base, engine
 from resume_parser import ResumeParser
 from web.forms import LoginForm, RegistrationForm, JobPreferencesForm
+from database import init_db
 
 # Configure logging
 logging.basicConfig(level=logging.INFO,
@@ -177,9 +179,20 @@ def view_application(job_id):
     finally:
         db.close()
 
+async def main():
+    """Main entry point for the job application bot"""
+    try:
+        init_db()
+        bot = JobBot()
+        await bot.start_application_process()
+    except Exception as e:
+        logging.error(f"Error in main process: {str(e)}")
+        raise
+
 if __name__ == "__main__":
     # Create database tables
     Base.metadata.create_all(bind=engine)
     
     # Start the Flask app
     app.run(debug=Config.DEBUG_MODE, use_reloader=False)
+    asyncio.run(main())
